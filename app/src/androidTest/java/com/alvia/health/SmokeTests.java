@@ -29,7 +29,7 @@ public class SmokeTests extends Instrumentation {
             vault.remove("documents",docId);vault.deleteDocument(docId);docId=null;vault.remove("records",id);id=null;
             activity=(MainActivity)startActivitySync(new Intent(target,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));waitForIdleSync();MainActivity app=activity;
             for(int screen=0;screen<5;screen++){int tab=screen;final Throwable[] failure={null};runOnMainSync(()->{try{app.go(tab);View decor=app.getWindow().getDecorView();check(decor!=null,"screen "+tab+" renders");}catch(Throwable t){failure[0]=t;}});if(failure[0]!=null)throw new RuntimeException(failure[0]);waitForIdleSync();
-                runOnMainSync(()->{try{View view=app.getWindow().getDecorView();Bitmap bitmap=Bitmap.createBitmap(view.getWidth(),view.getHeight(),Bitmap.Config.ARGB_8888);view.draw(new Canvas(bitmap));try(FileOutputStream out=new FileOutputStream(new File(app.getExternalFilesDir(null),"screen-"+tab+".png"))){bitmap.compress(Bitmap.CompressFormat.PNG,100,out);}bitmap.recycle();}catch(Exception e){throw new RuntimeException(e);}});
+                runOnMainSync(()->{try{View view=app.getWindow().getDecorView();Bitmap bitmap=Bitmap.createBitmap(view.getWidth(),view.getHeight(),Bitmap.Config.ARGB_8888);bitmap.setHasAlpha(false);view.draw(new Canvas(bitmap));try(FileOutputStream out=new FileOutputStream(new File(app.getExternalFilesDir(null),"screen-"+tab+".png"))){bitmap.compress(Bitmap.CompressFormat.PNG,100,out);}bitmap.recycle();}catch(Exception e){throw new RuntimeException(e);}});
             }
             runOnMainSync(()->{app.go(2);app.selectSystem(7);app.selectSystem(8);app.go(3);app.go(4);app.go(0);});waitForIdleSync();checks++;
             AlertDialog[] editor={null};
@@ -107,7 +107,8 @@ public class SmokeTests extends Instrumentation {
             runOnMainSync(()->{
                 app.go(2);
                 java.util.List<android.widget.TextView> labels=new java.util.ArrayList<>();collect(app.getWindow().getDecorView(),android.widget.TextView.class,labels);
-                check(labels.stream().anyMatch(v->"TU MAPA PERSONAL".contentEquals(v.getText())&&Math.abs(v.getTextSize()/app.getResources().getDisplayMetrics().scaledDensity-32)<1),"body title is the large heading");
+                check(labels.stream().anyMatch(v->"Tu mapa personal".contentEquals(v.getText())&&Math.abs(v.getTextSize()/app.getResources().getDisplayMetrics().scaledDensity-32)<1),"body title is the large heading");
+                check(labels.stream().anyMatch(v->"CONOCE TU CUERPO".contentEquals(v.getText())),"body section has its contextual eyebrow");
                 check(labels.stream().noneMatch(v->"Escucha a tu cuerpo".contentEquals(v.getText())),"old body title removed");
                 app.go(0);
             });waitForIdleSync();capture(app,app.getWindow().getDecorView(),"home-light.png");
@@ -163,7 +164,7 @@ public class SmokeTests extends Instrumentation {
         finally {try{if(vault!=null){if(id!=null)vault.remove("records",id);if(docId!=null){vault.remove("documents",docId);vault.deleteDocument(docId);}}}catch(Exception ignored){}}
     }
     private void capture(MainActivity app,View view,String name){
-        runOnMainSync(()->{try{Bitmap bitmap=Bitmap.createBitmap(view.getWidth(),view.getHeight(),Bitmap.Config.ARGB_8888);view.draw(new Canvas(bitmap));try(FileOutputStream output=new FileOutputStream(new File(app.getExternalFilesDir(null),name))){bitmap.compress(Bitmap.CompressFormat.PNG,100,output);}bitmap.recycle();}catch(Exception e){throw new RuntimeException(e);}});
+        runOnMainSync(()->{try{Bitmap bitmap=Bitmap.createBitmap(view.getWidth(),view.getHeight(),Bitmap.Config.ARGB_8888);bitmap.setHasAlpha(false);view.draw(new Canvas(bitmap));try(FileOutputStream output=new FileOutputStream(new File(app.getExternalFilesDir(null),name))){bitmap.compress(Bitmap.CompressFormat.PNG,100,output);}bitmap.recycle();}catch(Exception e){throw new RuntimeException(e);}});
     }
     private <T extends View> void collect(View root,Class<T> type,java.util.List<T> found){
         if(type.isInstance(root))found.add(type.cast(root));

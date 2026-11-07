@@ -84,8 +84,8 @@ class SourcesActivity: FragmentActivity() {
     }
     private fun render(){
         val scroll=ScrollView(this);scroll.setBackgroundColor(background)
-        page=LinearLayout(this);page.orientation=LinearLayout.VERTICAL;page.setPadding(dp(24),dp(24),dp(24),dp(24));scroll.addView(page);setContentView(scroll);form=page
-        if(android.os.Build.VERSION.SDK_INT>=30)scroll.setOnApplyWindowInsetsListener {v,i -> val b=i.getInsets(android.view.WindowInsets.Type.systemBars());v.setPadding(b.left,b.top,b.right,b.bottom);i}
+        page=AdaptiveColumn(this);page.orientation=LinearLayout.VERTICAL;page.setPadding(dp(24),dp(24),dp(24),dp(24));scroll.addView(page);setContentView(scroll);form=page
+        if(android.os.Build.VERSION.SDK_INT>=30)scroll.setOnApplyWindowInsetsListener {v,i -> val b=i.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout() or android.view.WindowInsets.Type.ime());v.setPadding(b.left,b.top,b.right,b.bottom);i}
         else scroll.fitsSystemWindows=true
         scroll.requestApplyInsets()
         val header=LinearLayout(this);header.gravity=Gravity.CENTER_VERTICAL
@@ -151,8 +151,10 @@ class SourcesActivity: FragmentActivity() {
     }
     private fun syncHealth(){if(healthRunning){healthMessage("Sincronizando mediciones…");return};healthRunning=true;healthMessage("Sincronizando mediciones…")
         Thread {val result=try{val count=HealthBridge.sync(applicationContext,false)
+            val weightStatus=SourceSync.setting(vault,"health").optString("weightStatus")
+            weightStatus+"\n"+(
             if(count>0)"Sincronización completada: $count mediciones nuevas o actualizadas. Puedes verlas en Salud."
-            else "Sincronización completada: no hay mediciones nuevas en los últimos 30 días. Si esperabas datos, revisa que Samsung Health o la app de tu dispositivo los comparta con Health Connect."
+            else "Sincronización completada: no hay mediciones nuevas en los últimos 30 días. Si esperabas datos, revisa que Samsung Health o la app de tu dispositivo los comparta con Health Connect.")
         }catch(e:Exception){"No se completó la sincronización. Revisa los permisos de medición y vuelve a intentarlo."}
             runOnUiThread {healthRunning=false;if(!isDestroyed&&!isFinishing)healthMessage(result)}
         }.start()

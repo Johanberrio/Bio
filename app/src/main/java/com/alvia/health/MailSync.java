@@ -12,7 +12,7 @@ final class MailSync {
     static boolean active(Vault v,FirebaseCloud cloud,String owner,String id)throws Exception{return cloud.account()&&owner.equals(cloud.owner())&&SourceSync.setting(v,id).optBoolean("enabled");}
     static void saveProgress(Vault v,String id,JSONObject progress)throws Exception{
         synchronized(SourceSync.LOCK){JSONObject current=SourceSync.setting(v,id);if(!current.optBoolean("enabled"))return;
-            for(String key:Arrays.asList("since","until","cursor","lastComplete","lastAttempt","status"))if(progress.has(key))current.put(key,progress.get(key));
+            for(String key:Arrays.asList("since","until","cursor","lastComplete","lastAttempt","status","syncError"))if(progress.has(key))current.put(key,progress.get(key));
             v.put("sources",current);}
     }
     static JSONObject refresh(Context c,Vault v,FirebaseCloud cloud)throws Exception{
@@ -38,11 +38,24 @@ final class MailSync {
     }
     static int stage(Context c,Vault v,FirebaseCloud cloud,DocumentPipeline pipeline)throws Exception{
         String owner=cloud.owner();MailApi api=new MailApi(c,cloud);int imported=0, analyzed=0;long deadline=System.currentTimeMillis()+4*60*1000;
+        boolean hasMailbox=false;for(JSONObject source:v.list("sources"))if(source.optString("id").startsWith(PREFIX)&&owner.equals(source.optString("owner"))&&active(v,cloud,owner,source.optString("id")))hasMailbox=true;
+        if(!hasMailbox)return 0;
+        JSONObject entitlement=api.post("/billing/status",new JSONObject());
+        if(!entitlement.optBoolean("premium")){
+            for(JSONObject source:v.list("sources"))if(source.optString("id").startsWith(PREFIX)&&owner.equals(source.optString("owner"))){source.put("status","La importación con IA requiere Bio Premium.");saveProgress(v,source.getString("id"),source);}
+            return 0;
+        }
+        JSONObject usage=entitlement.optJSONObject("usage");
+        if(usage!=null&&usage.optJSONObject("analysis")!=null&&usage.getJSONObject("analysis").optInt("remaining")<=0){
+            String reset=usage.optString("resetAt");if(reset.length()>=10)reset=reset.substring(0,10);
+            for(JSONObject source:v.list("sources"))if(source.optString("id").startsWith(PREFIX)&&owner.equals(source.optString("owner"))){source.put("status","Agotaste tus análisis de este mes. Se renovarán el "+reset+" (UTC).");saveProgress(v,source.getString("id"),source);}
+            return 0;
+        }
         List<JSONObject> sources=v.list("sources");sources.sort(Comparator.comparingLong(s->s.optLong("lastAttempt")));
         for(JSONObject source:sources){
             if(analyzed>=1||System.currentTimeMillis()>deadline)break;
             String id=source.optString("id");if(!id.startsWith(PREFIX)||!owner.equals(source.optString("owner"))||!active(v,cloud,owner,id))continue;
-            int before=imported;source.put("lastAttempt",System.currentTimeMillis());
+            int before=imported;source.put("lastAttempt",System.currentTimeMillis()).put("syncError",false);
             try{
                 long now=System.currentTimeMillis()/1000;
                 if(source.optLong("until")==0||source.optLong("since")<now-31*86400){source.put("since",Math.max(now-30*86400,source.optLong("lastComplete",now-30*86400)-86400)).put("until",now).put("cursor","");}
@@ -65,7 +78,18 @@ final class MailSync {
                         if(!duplicate){
                             if(!HealthProfile.complete(v))throw new java.io.IOException("Completa tu perfil, incluido nombre completo y fecha de nacimiento, para identificar tus documentos.");
                             JSONObject p=HealthProfile.current(v),patient=new JSONObject().put("fullName",p.getString("fullName")).put("birthDate",p.getString("birthDate"));
-                            JSONObject result=api.post("/analyze-document",new JSONObject().put("mailImport",true).put("patient",patient).put("profile",HealthProfile.clinical(v)).put("document",new JSONObject().put("mime",binary.getString("mime")).put("data",binary.getString("data"))));analyzed++;
+                            JSONObject result;
+                            try {
+                                result=api.post("/analyze-document",new JSONObject().put("mailImport",true).put("patient",patient).put("profile",HealthProfile.clinical(v)).put("document",new JSONObject().put("mime",binary.getString("mime")).put("data",binary.getString("data"))));
+                            } catch (MailApi.ApiException error) {
+                                if(!error.rejectedDocument())throw error;
+                                if(!active(v,cloud,owner,id))return imported;
+                                // Only a confirmed file rejection is acknowledged. Network,
+                                // subscription and quota failures must remain retryable.
+                                v.put("mailSeen",new JSONObject().put("id",key).put("source",id).put("owner",owner).put("fingerprint",fingerprint).put("name",file.getString("name")).put("status","No importado: "+error.getMessage()).put("created",System.currentTimeMillis()));
+                                seen.add(key);excluded++;continue;
+                            }
+                            analyzed++;
                             if(!active(v,cloud,owner,id))return imported;
                             if(admissible(result)){
                                 synchronized(DocumentPipeline.PROCESS_LOCK){
@@ -85,7 +109,7 @@ final class MailSync {
                     saveProgress(v,id,source);
                 }
                 source.put("status",(completed?"Revisión completada":"Revisión en curso; continuará automáticamente")+" · "+(imported-before)+" documentos nuevos"+" · "+candidates+" adjuntos candidatos"+(duplicates>0?" · "+duplicates+" ya revisados o guardados":"")+(excluded>0?" · "+excluded+" para revisar en el correo":"")+(completed&&candidates==0?". No se encontraron adjuntos compatibles con palabras como historia, ayudas diagnósticas, resultados o exámenes en el nombre del archivo. Se admiten PDF, JPG y PNG de hasta 10 MB; los enlaces no se importan.":""));saveProgress(v,id,source);
-            }catch(Exception e){source.put("status",e instanceof java.io.IOException?e.getMessage():"No se completó la revisión. Se reintentará automáticamente.");saveProgress(v,id,source);}
+            }catch(Exception e){source.put("syncError",true).put("status",e instanceof java.io.IOException?e.getMessage():"No se completó la revisión. Se reintentará automáticamente.");saveProgress(v,id,source);}
         }
         return imported;
     }

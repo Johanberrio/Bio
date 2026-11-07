@@ -13,6 +13,8 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
     <queries><package android:name="com.google.android.apps.healthdata" /></queries>
     <application android:name=".BioApplication" android:theme="@style/Theme.Bio" android:label="Bio" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher" android:allowBackup="false" android:fullBackupContent="false" android:dataExtractionRules="@xml/data_extraction_rules" tools:targetApi="31" android:usesCleartextTraffic="false" android:supportsRtl="true">
+        <activity android:name=".PremiumActivity" android:exported="false" />
+        <activity android:name=".AccountDeletionActivity" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".MailActivity" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity android:name=".SourcesActivity" android:exported="false" android:configChanges="orientation|screenSize|keyboardHidden" />
         <activity android:name=".HealthPermissionsActivity" android:exported="true">

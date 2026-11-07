@@ -41,10 +41,12 @@ final class SourceSync {
         JSONObject doc=pipeline.stage(name,category,mime,bytes).put("fingerprint",fingerprint).put("importSource",source).put("importOwner",owner);v.put("documents",doc);
         v.put("importLedger",new JSONObject().put("id",ledger).put("document",doc.getString("id")));return true;}
     }
-    static String run(Context c,boolean background)throws Exception{
+    static String run(Context c,boolean background)throws Exception{return run(c,background,()->{});}
+    static String run(Context c,boolean background,Runnable healthUpdated)throws Exception{
         synchronized(RUN_LOCK){running=true;try{Vault v=new Vault(c);FirebaseCloud cloud=FirebaseCloud.create(c);if(!cloud.account())return "Inicia sesión para sincronizar.";
         String owner=cloud.owner();DocumentPipeline pipeline=pipeline(c,v,cloud);int imported=0;String health="";
         try{int n=HealthBridge.sync(c,background);if(n>0)health=" · "+n+" mediciones actualizadas";}catch(Exception e){health=" · Revisa los permisos de Health Connect";}
+        healthUpdated.run();
         imported+=MailSync.stage(c,v,cloud,pipeline);
         for(JSONObject source:v.list("sources")){
             if(!cloud.account()||!owner.equals(cloud.owner()))break;
@@ -68,7 +70,8 @@ final class SourceSync {
             if(!doc.has("importSource")||!DocumentPipeline.pending(doc)||doc.optLong("retryAt")>System.currentTimeMillis())continue;
             try{pipeline.process(doc);}catch(Exception ignored){} // Durable error is shown on the document card.
         }
-        return imported+" documentos nuevos"+health;}finally{running=false;}}
+        boolean mailFailed=false;for(JSONObject source:v.list("sources"))if(source.optString("id").startsWith(MailSync.PREFIX)&&owner.equals(source.optString("owner"))&&source.optBoolean("enabled")&&source.optBoolean("syncError")){mailFailed=true;break;}
+        return (mailFailed?"Sincronización incompleta. Revisa el aviso de tu cuenta de correo.\n":"")+imported+" documentos nuevos"+health;}finally{running=false;}}
     }
 }
 

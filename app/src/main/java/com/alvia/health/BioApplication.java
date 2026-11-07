@@ -5,7 +5,12 @@ import android.os.Bundle;
 /** Session follows the entire app, not the lifetime of its main screen. */
 public class BioApplication extends Application implements Application.ActivityLifecycleCallbacks {
     private int started;
-    @Override public void onCreate(){super.onCreate();registerActivityLifecycleCallbacks(this);}
+    @Override public void onCreate(){super.onCreate();
+        if(getSharedPreferences("accountDeletion",MODE_PRIVATE).getBoolean("accepted",false)){
+            AuthSession.lock();ActivityManager manager=(ActivityManager)getSystemService(ACTIVITY_SERVICE);
+            if(manager!=null)manager.clearApplicationUserData();
+        }
+        registerActivityLifecycleCallbacks(this);}
     @Override public void onActivityStarted(Activity activity){if(started++==0)AuthSession.foreground();}
     @Override public void onActivityStopped(Activity activity){started=Math.max(0,started-1);if(started==0&&!activity.isChangingConfigurations())AuthSession.background();}
     @Override public void onActivityCreated(Activity a,Bundle b){}

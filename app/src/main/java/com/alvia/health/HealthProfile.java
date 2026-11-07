@@ -11,11 +11,12 @@ final class HealthProfile {
     static boolean complete(Vault vault){try{JSONObject p=current(vault);validate(p);return true;}catch(Exception e){return false;}}
     static boolean applyWeight(JSONObject profile,JSONObject reading,String owner,long now)throws Exception{
         double weight=reading.optDouble("value");long time=reading.optLong("created");
+        boolean automaticOverride="Health Connect".equals(reading.optString("origin"))&&!"Health Connect".equals(profile.optString("weightOrigin"));
         if(!owner.equals(profile.optString("owner"))||(!reading.optString("owner").isEmpty()&&!owner.equals(reading.optString("owner")))
             ||reading.optInt("metric",-1)!=7||!Double.isFinite(weight)||weight<0.1||weight>700
-            ||time<=0||time<profile.optLong("weightMeasuredAt")||time>now
-            ||(time==profile.optLong("weightMeasuredAt")&&(reading.optString("id").isEmpty()||!reading.optString("id").equals(profile.optString("weightRecord"))||Double.compare(weight,profile.optDouble("weightKg"))==0)))return false;
-        profile.put("weightKg",weight).put("weightMeasuredAt",time).put("weightOrigin",reading.optString("origin","Registro manual")).put("weightRecord",reading.optString("id"))
+            ||time<=0||(!automaticOverride&&time<profile.optLong("weightMeasuredAt"))||time>now
+            ||(!automaticOverride&&time==profile.optLong("weightMeasuredAt")&&(reading.optString("id").isEmpty()||!reading.optString("id").equals(profile.optString("weightRecord"))||Double.compare(weight,profile.optDouble("weightKg"))==0)))return false;
+        profile.put("weightKg",weight).put("weightMeasuredAt",time).put("weightOrigin",reading.optString("origin","Registro manual")).put("weightRecord",reading.optString("id")).put("weightPackage",reading.optString("sourcePackage"))
             .put("updatedAt",now).put("cloudState","pending");return true;
     }
     static boolean saveWeight(Vault vault,JSONObject item)throws Exception{

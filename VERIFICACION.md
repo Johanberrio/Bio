@@ -1,3 +1,31 @@
+## Preparación 0.6.12-preview — suscripciones (no desplegada)
+
+- Google Play Billing 8.3.0, pantalla de planes, restauración y verificación del servidor con cuenta ofuscada. Control de IA en ambos endpoints, carga manual sin análisis para Normal y pausa de importación de correo basada en IA.
+- 18 pruebas Python de suscripciones/adaptador/documentos aprobadas. assembleDebug y lintDebug correctos. Compra real, firma de producción y recorrido Play aún pendientes.
+- Añadida dependencia Fragment 1.8.9 para corregir conflicto detectado por lint tras añadir Billing.
+- Sin nuevo APK entregado, sin despliegue del servidor, sin modificación del modelo de producción. BIO_PREMIUM_READY deshabilitado por defecto. Véase docs/PREMIUM.md.
+
+## Actualización 0.6.11 — Medidas en Inicio
+
+- Peso, estatura y grupo sanguíneo en tres columnas de una sola fila. Eliminados los textos de procedencia, fecha y estado debajo de las medidas. Sin cambios en la sincronización automática.
+- assembleDebug y lintDebug: BUILD SUCCESSFUL. No se realizó comprobación visual en dispositivo en esta actualización.
+- Bio-0.6.11.apk (versionCode 26), checksum docs/Bio-0.6.11.sha256.
+
+## Actualización 0.6.10 — peso automático frente al perfil manual
+
+- La última lectura válida de Health Connect sustituye el peso manual incluso si el perfil se editó después. Se conservan decimales, propietario, fecha y reglas de orden entre lecturas automáticas.
+- Peso se lee antes de otros parámetros. Inicio muestra origen, fecha y estado; refresco tras Health Connect sin esperar al correo. Sin permiso o sin registros no se aplica la caché como si fuera una lectura nueva.
+- assembleDebug, assembleDebugAndroidTest y lintDebug correctos. WeightTests incorpora 8 comprobaciones, incluido 71 manual -> 70,8 de Health Connect. Ejecución no verificada: la instalación en emulator-5554 no finalizó durante la comprobación. No se afirma validación real con Google Fit del usuario.
+- Bio-0.6.10.apk (versionCode 25), checksum docs/Bio-0.6.10.sha256.
+
+## Actualización 0.6.9 — distribución adaptable
+
+- AdaptiveColumn calcula márgenes con el ancho real disponible y centra una columna de hasta 720 dp; aplicado a Inicio, secciones principales, autenticación, perfil, correo, fuentes y formularios.
+- AdaptiveRow apila medidas, tarjetas de signos vitales y acciones de citas cuando el ancho útil es inferior a 340 dp o fontScale >= 1.3. Navegación inferior y días del calendario dejan de tener alturas rígidas. Ilustraciones ajustadas al ancho conservando proporciones mediante FIT_CENTER y el lienzo del cuerpo.
+- Insets incluyen recortes de pantalla y teclado en pantallas secundarias; autenticación contempla Android 26–29. Botón de apariencia compacto con etiqueta accesible cuando aumenta la fuente.
+- assembleDebug, assembleDebugAndroidTest y lintDebug: BUILD SUCCESSFUL. Emulador Medium_Phone_API_36.1: LayoutTests ejecutado, 18 combinaciones aprobadas (280, 320, 360, 411, 600 y 840 dp; fuente 1.0, 1.3 y 2.0). Comprueba componentes adaptables: ancho, apilado y altura del texto. No equivale a validación visual de todas las pantallas en todos los fabricantes.
+- Bio-0.6.9.apk, versionCode 24, SHA256 docs/Bio-0.6.9.sha256. Sin cambios del servidor.
+
 ## Actualización 0.6.8 — estilo y separación del peso
 
 - BioButton compartido por acciones de Inicio y perfil. Botones de perfil basados en TextView con semántica accesible de botón, sin tintado nativo; selectores con colores y tipografía explícitos. Cambiar perfil tiene fondo de superficie contrastante sobre la tarjeta lila.
@@ -228,3 +256,26 @@ Los tests Android crean y eliminan datos sintéticos, no incluyen historias clí
 - Informe detallado de Android Lint: `app/build/reports/lint-results-debug.html`.
 
 La firma de desarrollo permite probar el APK, pero no sustituye una firma de publicación.
+
+
+## Publicación y cuotas — 29 octubre 2026, 0.6.16-preview (31)
+
+- Servidor: 82 pruebas unitarias aprobadas, incluidas cuotas concurrentes 30/20, aislamiento por cuenta y mes, devolución única, límites de entrada y rutas de IA.
+- Despliegue activo verificado. Pruebas reales sin inferencia: autenticación, bloqueo de IA para Normal, cuotas 30/20 devueltas por billing/status, denegación de acceso cliente a contadores; cuentas temporales eliminadas. OAuth Gmail/PKCE/cancelación/replay y secretos privados aprobados, sin acceder a correo real.
+- Gradle: assembleRelease, bundleRelease, assembleDebug, assembleDebugAndroidTest, lintDebug y lintVitalRelease aprobados. Lint conserva advertencias existentes; no equivale a ausencia total de avisos.
+- Emulador nuevo aislado Android 16/API 36: 116 comprobaciones Android aprobadas (documentos, cifrado, perfil/peso, filtros de correo y pantallas). Se corrigió una expectativa antigua del test que todavía buscaba TU MAPA PERSONAL; el comportamiento vigente y solicitado es Tu mapa personal.
+- El primer emulador carecía de espacio y no instaló el APK nuevo; el ensayo contra su APK anterior no se considera validación de esta versión. No se borraron sus datos. Emulador aislado creado en .tools/qa-avd.
+- Compilados Bio-0.6.16-preview.apk y .aab. SHA256 en docs/Bio-0.6.16-preview.sha256. No subidos aún a Play.
+- Ficha: textos en borrador, categoría Medicina guardada para revisión y soporte juandrak@msn.com guardado. Pendientes y política provisional en docs/PUBLICACION_PLAY.md. El titular todavía debe reunir a los 12 verificadores.
+- Falta comprobación real de sincronización Gmail y Health Connect con la versión nueva; las pruebas locales simulan datos y no sustituyen dispositivos/cuentas conectadas.
+
+- Capturas 1080×1920 RGB 24 bits verificadas y cuatro subidas/guardadas en la ficha de Play. Evidencia: docs/play-capturas-guardadas.png. La repetición de las 116 comprobaciones en ese tamaño también pasó.
+
+
+## Privacidad y eliminación — 30 octubre 2026, 0.6.17-preview (32)
+
+- 92 pruebas de servidor aprobadas. Borrado real de cuenta sintética, documentos, objetos, OAuth ficticio, cuotas y marcador final. Trabajador privado con permisos separados, programación OIDC y activación comprobados.
+- Pantalla Android clara/oscura revisada; confirmación explícita, contraseña oculta y contraseña incorrecta rechazadas. La solicitud válida llegó al servidor y `clearApplicationUserData` retiró el directorio de archivos. La terminación reportada por Instrumentation es esperada por el borrado; se verificó independientemente la cola y se retiró la cuenta temporal.
+- Se corrigió el enmascaramiento del campo tras el primer ensayo fallido; se repitió satisfactoriamente. No se modificaron cuentas reales ni se invocó IA.
+- APK/AAB release y debug, prueba Android y lint aprobados. Artefactos `Bio-0.6.17-preview.apk` y `.aab`, hashes en `docs/Bio-0.6.17-preview.sha256`. No subidos aún a Play.
+- Política publicada, enlazada en la app y guardada en Play; explicación de retención técnica Storage (7 días) y Firestore (1 hora), marcador mínimo 30 días. Mayor detalle: `docs/ELIMINACION_CUENTA.md`.

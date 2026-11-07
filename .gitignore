@@ -32,3 +32,18 @@ app/src/main/assets/backend-config.json
 **/*service_account*.json
 *.pem
 *.p12
+
+# Local conversation files, temporary exports and console evidence
+.codex-attachments/
+output/
+tmp/
+docs/*.png
+docs/play-capturas-*/
+docs/play-assets/
+docs/*.ipynb
+docs/*resultados*.json
+docs/*intento*.json
+docs/*verificacion*.json
+docs/*verification*.json
+docs/*salida.txt
+server/public/account-config.json

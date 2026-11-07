@@ -66,6 +66,16 @@ class MailTests(unittest.TestCase):
         valid='https://graph.microsoft.com/v1.0/me/messages?$skip=5'
         self.assertEqual(mail.graph_cursor(valid),valid)
 
+    def test_oauth_callback_cannot_recreate_account_during_erasure(self):
+        db=MagicMock();pending=MagicMock();marker=MagicMock()
+        pending.get.return_value.to_dict.return_value={'stateHash':mail.digest('owner.random'),'expires':time.time()+600,'provider':'google','verifier':'x'}
+        marker.get.return_value.exists=True
+        db.collection.side_effect=lambda name: MagicMock(document=MagicMock(return_value=marker if name=='_accountDeletion' else pending))
+        with patch.object(mail.firestore,'transactional',side_effect=lambda f:f),patch.object(mail,'config',return_value={'clientId':'id','clientSecret':'secret'}),patch.object(mail,'remote',side_effect=[{'scope':'https://www.googleapis.com/auth/gmail.readonly','refresh_token':'refresh','access_token':'access'},{'emailAddress':'fixture@example.invalid'}]):
+            with self.assertRaises(mail.MailError) as error:mail.callback(db,'google',{'state':'owner.random','code':'code'})
+            self.assertEqual(error.exception.status,410)
+            db.transaction.return_value.set.assert_not_called()
+
     def test_nested_gmail_attachment_and_inline_logo(self):
         attachment={'filename':'resultado.pdf','mimeType':'application/pdf','body':{'attachmentId':'a','size':100}}
         logo={'filename':'medical-logo.png','mimeType':'image/png','body':{'attachmentId':'b','size':100},'headers':[{'name':'Content-Disposition','value':'inline'}]}

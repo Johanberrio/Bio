@@ -1,10 +1,62 @@
 # Bio · Android MVP
 
+## Estado actual: 0.6.19-preview (34)
+
+Actualizado el 7 de noviembre de 2026. Código Android, servidor, reglas Firebase, pruebas e imágenes de la app. APK y AAB de esta versión se distribuyen como archivos de la versión en GitHub, fuera del historial del código.
+
+- Google Play: disponible en prueba interna. La publicación fue rechazada por el requisito de cuenta de organización; no está aprobada para producción.
+- Gmail: importación confirmada por el responsable con un PDF legible; verificación OAuth para acceso público pendiente.
+- Health Connect: el responsable confirmó que la sincronización funciona. El peso mantiene decimales y se presenta en Inicio, separado de los signos vitales.
+- Premium: 30 análisis de documentos y 20 consultas por cuenta y mes calendario UTC. Gmail comparte el cupo de análisis. COP 13.000/mes en Colombia y USD 5/mes en los mercados USD configurados.
+- La versión 34 corrige el menú de cuenta para mostrar «Eliminar cuenta». Compilaciones APK/AAB, lint de release y prueba del menú en emulador aprobados; ver [verificación](docs/MENU_CUENTA_0619.md).
+
+### Configuración al clonar
+
+Usa Android Studio, JDK 17 o superior y Android SDK 36. Antes de ejecutar, completa localmente:
+
+1. `app/src/main/assets/firebase-config.json`, a partir de `firebase/firebase-config.example.json`.
+2. `app/src/main/assets/backend-config.json`, a partir del ejemplo de la misma carpeta.
+3. `server/public/account-config.json`, a partir de `account-config.example.json`, para la página de eliminación de cuenta.
+4. Variables y secretos del servidor según [Firebase y documentos](docs/FIREBASE_Y_DOCUMENTOS.md), [correo](docs/CORREO_DIRECTO.md) y [Premium](docs/PREMIUM.md).
+
+Las claves de firma, credenciales OAuth, archivos de usuarios, configuraciones de producción y capturas privadas de las consolas están excluidos de Git. La firma de release requiere `.secrets/upload-signing.properties` y su almacén de claves local. No compartas esos archivos.
+
+```powershell
+.\gradlew.bat assembleDebug
+python -m pip install -r server/requirements.txt
+python -m unittest discover -s server
+```
+
+Los siguientes apartados conservan el historial del desarrollo. Las afirmaciones sobre pendientes y servicios no desplegados corresponden a su versión histórica; para el estado actual consulta el resumen anterior y [PUBLICACION_PLAY](docs/PUBLICACION_PLAY.md).
+
+## Historial: preparación 0.6.17-preview (32)
+
+APK y AAB generados: `Bio-0.6.17-preview.apk` / `Bio-0.6.17-preview.aab`. Aún no subidos a Google Play; la pista interna conserva 0.6.15 (30). Las instalaciones con firma de Play deben actualizarse desde Play, sin desinstalar para cambiar a este APK.
+
+Servidor desplegado con 30 análisis y 20 consultas de IA por cuenta y mes calendario UTC. Gmail comparte los análisis; las reservas son transaccionales y los errores del servicio devuelven el cupo. La pantalla Premium muestra el saldo. Precios actuales: COP 13.000 en Colombia y USD 5 en los mercados USD configurados.
+
+Estado y pendientes de publicación: [PUBLICACION_PLAY](docs/PUBLICACION_PLAY.md). Guion para reunir y coordinar verificadores: [PRUEBA_CERRADA](docs/PRUEBA_CERRADA.md). Política pública registrada en Play y eliminación de cuenta implementada y verificada: [detalle](docs/ELIMINACION_CUENTA.md). Público inicial confirmado: mayores de 18 años. Faltan formularios y verificaciones de Google, materiales de ficha y pruebas reales en el teléfono.
+
+
 Aplicación nativa para Android Studio, escrita en Java 17 y Kotlin, con blanco como color principal, morado secundario y verde terciario. Interfaz en español, sin anuncios ni datos clínicos de demostración precargados.
 
-## Versión actual: 0.6.8 — Botones de perfil y peso separado
+## Actualización 0.6.15-preview (30)
 
-APK: `Bio-0.6.8.apk`. Botones de perfil unificados con Bio, sin tintes nativos de Android; Cambiar perfil contrasta con la tarjeta de Inicio. El peso queda fuera de la lista y formulario de signos vitales, con almacenamiento independiente y migración de registros anteriores. Inicio usa la nueva ilustración femenina cuando el perfil es Mujer y contiene «Cambiar perfil». El perfil incorpora tarjetas y modo oscuro. Health Connect importa peso (kg), conserva su historial y actualiza el perfil con la lectura más reciente, sin sobreescribir mediciones manuales posteriores. Requiere autorizar READ_WEIGHT y, para la app cerrada, lectura en segundo plano. Peso y estatura del perfil aparecen junto al cuerpo en Inicio. Los avisos de adjuntos rechazados se pueden descartar, caducan a los siete días y se ocultan si su huella coincide con un documento importado; se conserva la deduplicación. El perfil permite elegir Mujer/Hombre para el mapa visual. Se añaden siete láminas femeninas originales; se añaden láminas reproductivas propias para mujer y hombre y el óseo femenino queda pendiente de imagen. La elección se respalda con el perfil y no se usa como dato clínico inferido. Tu correo en Bio incorpora tarjetas, logo, botones morados y modo oscuro. El saludo de inicio de sesión es «Cuida tu salud» y Mi cuerpo muestra «CONOCE TU CUERPO» sobre «Tu mapa personal». Fuentes y dispositivos incorpora el logo, tarjetas redondeadas, tipografía y colores de Bio, y respeta el modo claro/oscuro seleccionado. Se retira temporalmente la sección y enlace de SURA. Se conservan Health Connect, carpetas y gestión de correos.
+Colombia mantiene un precio fijo de COP 13.000/mes. Premium consulta el precio localizado directamente a Google Play al abrir la pantalla, sin importes de referencia escritos en el APK. El 28 de octubre se habilitó el plan en 75 países o regiones que Play cobra en USD, a US$5,00/mes; las demás monedas siguen pendientes. Esta configuración no publica la app en producción. APK: `Bio-0.6.15-preview.apk`; paquete de Play: `Bio-0.6.15-preview.aab`.
+
+## Historial: 0.6.14-preview (29)
+
+Precio de referencia de Bio Premium actualizado a US$4 al mes. Google Play confirma el importe localizado antes de pagar. APK: `Bio-0.6.14-preview.apk`; paquete de Play: `Bio-0.6.14-preview.aab`.
+
+## Historial: 0.6.13-preview (28)
+
+Análisis de documentos organizado en Resumen, Resultados y Limitaciones. Cada hallazgo muestra su cita y página; los avisos extensos se pueden desplegar. Conserva los análisis existentes sin volver a llamar a la IA. Incluye mejoras de restauración de Premium. APK: `Bio-0.6.13-preview.apk`; paquete de Play: `Bio-0.6.13-preview.aab`.
+
+Premium se verifica en el servidor con Google Play; la compra de prueba y el análisis de un documento sintético ya fueron comprobados. Estado y límites en [docs/PREMIUM.md](docs/PREMIUM.md).
+
+## Historial: 0.6.11 — Medidas en Inicio
+
+APK: `Bio-0.6.11.apk`. El último peso leído de Health Connect sustituye el valor manual del perfil y mantiene los decimales. Inicio muestra peso, estatura y grupo sanguíneo en una misma fila, sin textos de procedencia ni estado debajo. Se actualiza antes de la importación de correo. Márgenes adaptables, contenido centrado en pantallas amplias, tarjetas que se apilan en poco espacio o con texto grande, navegación y calendario sin alturas de texto rígidas, e ilustraciones ajustadas al ancho. Botones de perfil unificados con Bio, sin tintes nativos de Android; Cambiar perfil contrasta con la tarjeta de Inicio. El peso queda fuera de la lista y formulario de signos vitales, con almacenamiento independiente y migración de registros anteriores. Inicio usa la nueva ilustración femenina cuando el perfil es Mujer y contiene «Cambiar perfil». El perfil incorpora tarjetas y modo oscuro. Health Connect importa peso (kg), conserva su historial y actualiza el perfil con la lectura más reciente, sustituyendo el valor manual con la lectura de Health Connect. Requiere autorizar READ_WEIGHT y, para la app cerrada, lectura en segundo plano. Peso y estatura del perfil aparecen junto al cuerpo en Inicio. Los avisos de adjuntos rechazados se pueden descartar, caducan a los siete días y se ocultan si su huella coincide con un documento importado; se conserva la deduplicación. El perfil permite elegir Mujer/Hombre para el mapa visual. Se añaden siete láminas femeninas originales; se añaden láminas reproductivas propias para mujer y hombre y el óseo femenino queda pendiente de imagen. La elección se respalda con el perfil y no se usa como dato clínico inferido. Tu correo en Bio incorpora tarjetas, logo, botones morados y modo oscuro. El saludo de inicio de sesión es «Cuida tu salud» y Mi cuerpo muestra «CONOCE TU CUERPO» sobre «Tu mapa personal». Fuentes y dispositivos incorpora el logo, tarjetas redondeadas, tipografía y colores de Bio, y respeta el modo claro/oscuro seleccionado. Se retira temporalmente la sección y enlace de SURA. Se conservan Health Connect, carpetas y gestión de correos.
 
 Gmail está configurado; el usuario confirmó conexión, pero la importación real sigue pendiente de verificar. El filtro selecciona adjuntos por su nombre y mantiene cuotas de análisis. Outlook/Hotmail queda pospuesto por decisión del usuario. Ver `docs/CORREO_DIRECTO.md`. No se ha verificado un reloj o dispositivo médico físico.
 ## Acceso y biometría (desde 0.4.0)

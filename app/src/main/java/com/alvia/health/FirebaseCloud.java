@@ -45,6 +45,13 @@ final class FirebaseCloud {
         try{bind(vault);}catch(Exception e){auth.signOut();throw e;}
     }
     void resetPassword(String email)throws Exception{waitFor(auth.sendPasswordResetEmail(email));}
+    void confirmDeletionPassword(String password)throws Exception{
+        if(!account())throw new IOException("Inicia sesión con tu cuenta de Bio.");
+        FirebaseUser user=auth.getCurrentUser();String owner=owner();
+        waitFor(user.reauthenticate(EmailAuthProvider.getCredential(user.getEmail(),password)));
+        waitFor(user.getIdToken(true));
+        if(!account()||!owner.equals(owner()))throw new IOException("La sesión cambió. Vuelve a intentarlo.");
+    }
     void syncProfile(Vault vault)throws Exception{
         if(!account())return;bind(vault);DocumentReference ref=db.collection("users").document(uid()).collection("profile").document("main");JSONObject local=HealthProfile.current(vault);
         if(HealthProfile.complete(vault)&&"pending".equals(local.optString("cloudState"))){

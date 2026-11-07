@@ -29,11 +29,15 @@ final class DocumentPipeline {
             if(!pending(original)&&"synced".equals(original.optString("cloudState")))return original;
             JSONObject doc=new JSONObject(original.toString());
             try{
-                if(!"completed".equals(doc.optString("analysisState"))){
+                if(!"completed".equals(doc.optString("analysisState"))&&!doc.optBoolean("metadataReviewed")){
                     JSONObject result=analyzer.analyze(doc,vault.readDocument(doc.getString("id")));
                     if(Thread.currentThread().isInterrupted())throw new InterruptedException();
+                    if(result.optBoolean("premiumRequired")){
+                        doc.put("metadataReviewed",true).put("analysisState","not_requested").put("name",doc.optString("originalName",doc.optString("name")));
+                    }else{
                     if(!result.optBoolean("readable")||result.isNull("name")||result.optString("name").trim().isEmpty())throw new ImportException("No se pudo identificar el contenido. Usa un archivo legible y completo.",false,0);
                     ClinicalDocuments.apply(doc,result);
+                    }
                     doc.put("importPending",true).put("cloudState","pending");vault.put("documents",doc);
                 }
                 // Stage is retained if upload fails; the next attempt reuses the analysis.
@@ -71,8 +75,14 @@ final class DocumentPipeline {
             JSONObject payload=new JSONObject().put("profile",profile).put("document",new JSONObject().put("mime",doc.getString("mime")).put("category",ClinicalDocuments.category(doc)).put("data",android.util.Base64.encodeToString(bytes,android.util.Base64.NO_WRAP)));
             byte[] encoded=payload.toString().getBytes(StandardCharsets.UTF_8);http.setFixedLengthStreamingMode(encoded.length);try(OutputStream out=http.getOutputStream()){out.write(encoded);}
             int status=http.getResponseCode();
+            if(status==402)return new JSONObject().put("premiumRequired",true);
             if(status!=200){
-                if(status==429){long tomorrow=java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(1).atStartOfDay().toInstant(java.time.ZoneOffset.UTC).toEpochMilli();throw new ImportException("Se alcanzó el límite de análisis. La carga se reanudará mañana; tu archivo está conservado.",true,tomorrow);}
+                if(status==429){
+                    long retry=System.currentTimeMillis()+3600000L;String message="Se alcanzó el límite de análisis. Tu archivo se conserva y se reintentará automáticamente.";
+                    try(InputStream in=http.getErrorStream()){JSONObject error=new JSONObject(new String(MainActivity.readLimited(in,32768),StandardCharsets.UTF_8));message=error.optString("error",message);if(error.has("resetAt"))retry=java.time.OffsetDateTime.parse(error.getString("resetAt")).toInstant().toEpochMilli();}catch(Exception ignored){}
+                    throw new ImportException(message,true,retry);
+                }
+                if(status==413){String message="El documento supera el tamaño o la extensión admitida. Divídelo en partes completas más pequeñas.";throw new ImportException(message,false,0);}
                 if(status==401||status==403)throw new ImportException("No se pudo validar el acceso automático. Se reintentará la conexión.",true,0);
                 if(status==400||status==413||status==415)throw new ImportException("El archivo no se pudo leer. Usa un PDF, JPG o PNG válido de hasta 10 MB.",false,0);
                 throw new ImportException("El servicio de análisis no respondió correctamente ("+status+"). Se reintentará automáticamente.",true,0);

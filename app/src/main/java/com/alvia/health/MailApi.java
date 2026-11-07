@@ -8,6 +8,16 @@ import java.nio.charset.StandardCharsets;
 
 /** Only Bio's authenticated HTTPS service receives requests; OAuth secrets stay server-side. */
 final class MailApi {
+    static final class ApiException extends IOException {
+        final int status; final String code;
+        ApiException(int status, JSONObject response) {
+            super(response.optString("error", "No se completó la sincronización de correo."));
+            this.status=status; this.code=response.optString("code");
+        }
+        boolean rejectedDocument() {
+            return status==422 && ("document_password_required".equals(code) || "document_unreadable".equals(code));
+        }
+    }
     final FirebaseCloud cloud; final String endpoint;
     MailApi(Context c,FirebaseCloud cloud)throws Exception{
         this.cloud=cloud;
@@ -19,15 +29,15 @@ final class MailApi {
         String owner=cloud.owner();
         HttpURLConnection h=(HttpURLConnection)new URL(endpoint+path).openConnection();
         try{
-            h.setConnectTimeout(20000);h.setReadTimeout(path.equals("/analyze-document")?290000:180000);h.setInstanceFollowRedirects(false);
+            h.setConnectTimeout(20000);h.setReadTimeout(path.startsWith("/billing/")?45000:path.equals("/analyze-document")?290000:180000);h.setInstanceFollowRedirects(false);
             h.setRequestMethod("POST");h.setRequestProperty("Content-Type","application/json");h.setRequestProperty("Authorization","Bearer "+cloud.idToken());h.setDoOutput(true);
             byte[] body=payload.toString().getBytes(StandardCharsets.UTF_8);h.setFixedLengthStreamingMode(body.length);try(OutputStream out=h.getOutputStream()){out.write(body);}
-            int code=h.getResponseCode();if(code==429)throw new IOException("Límite diario de análisis alcanzado. Se reintentará mañana.");
+            int code=h.getResponseCode();
             InputStream stream=code==200?h.getInputStream():h.getErrorStream();JSONObject result;
             if(stream==null)throw new IOException("El servicio de correo no respondió ("+code+").");
             try(InputStream in=stream){result=new JSONObject(new String(MainActivity.readLimited(in,code==200?15*1024*1024:32768),StandardCharsets.UTF_8));}
             if(!cloud.account()||!owner.equals(cloud.owner()))throw new IOException("La sesión cambió. Vuelve a intentarlo.");
-            if(code!=200)throw new IOException(result.optString("error","No se completó la sincronización de correo."));
+            if(code!=200)throw new ApiException(code,result);
             return result;
         }finally{h.disconnect();}
     }

@@ -23,8 +23,8 @@ public class ProfileActivity extends Activity {
         try{vault=new Vault(this);cloud=FirebaseCloud.create(this);if(!cloud.account()){finish();return;}}catch(Exception e){finish();return;}
         AuthSession.profileAccess=false;
         JSONObject previous=HealthProfile.current(vault);birth=previous.optString("birthDate");
-        ScrollView scroll=new ScrollView(this);LinearLayout form=new LinearLayout(this);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(dp(24),dp(24),dp(24),dp(24));scroll.setBackgroundColor(dark?0xff141119:Color.WHITE);scroll.addView(form);setContentView(scroll);
-        if(Build.VERSION.SDK_INT>=30)scroll.setOnApplyWindowInsetsListener((v,i)->{android.graphics.Insets b=i.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.ime());v.setPadding(b.left,b.top,b.right,b.bottom);return i;});
+        ScrollView scroll=new ScrollView(this);LinearLayout form=new AdaptiveColumn(this);form.setOrientation(LinearLayout.VERTICAL);form.setPadding(dp(24),dp(24),dp(24),dp(24));scroll.setBackgroundColor(dark?0xff141119:Color.WHITE);scroll.addView(form);setContentView(scroll);
+        if(Build.VERSION.SDK_INT>=30)scroll.setOnApplyWindowInsetsListener((v,i)->{android.graphics.Insets b=i.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout()|WindowInsets.Type.ime());v.setPadding(b.left,b.top,b.right,b.bottom);return i;});
         else scroll.setFitsSystemWindows(true);
         scroll.requestApplyInsets();
         LinearLayout header=new LinearLayout(this);header.setGravity(Gravity.CENTER_VERTICAL);
@@ -43,7 +43,7 @@ public class ProfileActivity extends Activity {
         LinearLayout measures=card(form,"TU CUERPO","Peso y estatura");
         EditText height=field(measures,"Estatura (cm)",previous.has("heightCm")?previous.optString("heightCm"):"",InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
         EditText weight=field(measures,"Peso (kg)",previous.has("weightKg")?previous.optString("weightKg"):"",InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        label(measures,"El peso se actualiza automáticamente con las mediciones autorizadas de Health Connect. Una lectura anterior no reemplaza un peso manual más reciente.",13,muted);
+        label(measures,"El peso se actualiza automáticamente con las mediciones autorizadas de Health Connect. Al sincronizar, la última lectura disponible de Health Connect sustituye el peso manual.",13,muted);
         LinearLayout medical=card(form,"DATOS DE SALUD","Grupo sanguíneo");
         label(medical,"Si lo desconoces, elige No lo sé.",13,muted);Spinner blood=new Spinner(this);blood.setAdapter(choices(HealthProfile.BLOOD));blood.setSelection(Math.max(0,Arrays.asList(HealthProfile.BLOOD).indexOf(previous.optString("bloodGroup"))));styleSpinner(blood);medical.addView(blood);
         TextView error=new TextView(this);error.setTextColor(0xffa12e46);form.addView(error);TextView save=new TextView(this);save.setText("Guardar y continuar");styleButton(save,true);form.addView(save,new LinearLayout.LayoutParams(-1,-2));
@@ -51,7 +51,7 @@ public class ProfileActivity extends Activity {
             synchronized(SourceSync.LOCK){
                 JSONObject latest=HealthProfile.current(vault);
                 if(Double.compare(p.optDouble("weightKg"),previous.optDouble("weightKg"))!=0){p.put("weightMeasuredAt",System.currentTimeMillis()).put("weightOrigin","Registro manual");}
-                else {for(String key:new String[]{"weightKg","weightMeasuredAt","weightOrigin","weightRecord"})if(latest.has(key))p.put(key,latest.get(key));}
+                else {for(String key:new String[]{"weightKg","weightMeasuredAt","weightOrigin","weightRecord","weightPackage"})if(latest.has(key))p.put(key,latest.get(key));}
                 vault.put("profile",p);
             }saving=true;save.setEnabled(false);error.setText("Guardando perfil…");new Thread(()->{try{cloud.syncProfile(vault);}catch(Exception ignored){}runOnUiThread(()->{if(!isDestroyed()&&!isFinishing()){setResult(RESULT_OK);finish();}});},"profile-save").start();}catch(NumberFormatException e){error.setText("Introduce estatura y peso con números válidos.");}catch(Exception e){error.setText(e.getMessage());}});
     }

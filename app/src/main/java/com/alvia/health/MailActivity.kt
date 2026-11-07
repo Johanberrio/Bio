@@ -62,8 +62,8 @@ class MailActivity: FragmentActivity() {
     }
     private fun render(){
         val scroll=ScrollView(this);scroll.setBackgroundColor(if(dark)0xff141119.toInt() else Color.WHITE)
-        page=LinearLayout(this);page.orientation=LinearLayout.VERTICAL;page.setPadding(dp(24),dp(24),dp(24),dp(24));scroll.addView(page);setContentView(scroll);form=page
-        if(android.os.Build.VERSION.SDK_INT>=30)scroll.setOnApplyWindowInsetsListener{v,i->val b=i.getInsets(android.view.WindowInsets.Type.systemBars());v.setPadding(b.left,b.top,b.right,b.bottom);i}
+        page=AdaptiveColumn(this);page.orientation=LinearLayout.VERTICAL;page.setPadding(dp(24),dp(24),dp(24),dp(24));scroll.addView(page);setContentView(scroll);form=page
+        if(android.os.Build.VERSION.SDK_INT>=30)scroll.setOnApplyWindowInsetsListener{v,i->val b=i.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout() or android.view.WindowInsets.Type.ime());v.setPadding(b.left,b.top,b.right,b.bottom);i}
         else scroll.fitsSystemWindows=true
         scroll.requestApplyInsets()
         val header=LinearLayout(this);header.gravity=Gravity.CENTER_VERTICAL

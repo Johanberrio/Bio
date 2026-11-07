@@ -3,12 +3,14 @@ import json
 import unittest
 from vertex_gateway import prepare, extract
 from test_document_analysis import sample
+from test_document_input import synthetic_pdf
 
 class VertexTests(unittest.TestCase):
     def test_pdf_and_no_tools_for_analysis(self):
-        encoded = base64.b64encode(b"%PDF-1.4 synthetic").decode()
+        raw = synthetic_pdf()
+        encoded = base64.b64encode(raw).decode()
         parts, config = prepare({"document": {"mime": "application/pdf", "data": encoded}}, True)
-        self.assertEqual(parts[1]["inline_data"]["data"], b"%PDF-1.4 synthetic")
+        self.assertEqual(parts[1]["inline_data"]["data"], raw)
         self.assertNotIn("tools", config)
         self.assertEqual(config["response_mime_type"], "application/json")
 

@@ -1,8 +1,10 @@
-# Correo directo de Bio 0.6.2
+# Correo directo de Bio
 
 ## Estado
 
-Actualización del 2 de octubre de 2026: cliente web de Google validado desde el JSON local y guardado en `_mailConfig/google` sin exponer sus secretos. Estado real del servidor: `google: true`, `microsoft: false`. Se verificaron con una cuenta temporal el inicio OAuth, URI fija, PKCE, cancelación, rechazo de reutilización del estado y denegación de lectura de la configuración privada a usuarios Firebase. El usuario confirmó que Gmail aparece conectado en Bio, pero su prueba devolvió cero documentos y posteriormente desapareció el botón de sincronizar. No se ha verificado una importación real de extremo a extremo. El usuario confirmó haber añadido el usuario de prueba y guardado el permiso gmail.readonly en Google Cloud. Falta realizar el consentimiento real y la prueba de importación desde Bio. Por decisión del usuario, Outlook/Hotmail queda pospuesto hasta que Bio genere ingresos con usuarios premium en Play Store; no continuar el alta de Azure ni solicitar tarjeta para Microsoft.
+Actualización del 5 de noviembre de 2026: Gmail está configurado y el responsable confirmó una importación real funcional después de identificar un PDF protegido/ilegible. El servidor rechaza estos archivos antes de usar IA o cupo; la versión 0.6.18-preview (33), ya publicada en prueba interna, permite continuar con los demás adjuntos. Ese último recorrido de cola todavía requiere comprobación en el teléfono. OAuth sigue en modo Prueba, sin aprobación de uso público. La política de privacidad ya está guardada en la marca de Google; faltan página principal, propiedad de dominio y requisitos de verificación. Véase `GMAIL_VERIFICACION_PUBLICA.md`.
+
+Outlook/Hotmail permanece pospuesto por decisión del responsable; no continuar el alta de Azure ni solicitar tarjeta para Microsoft.
 
 Implementados los adaptadores Gmail API y Microsoft Graph, autorización OAuth con PKCE, pantalla de cuentas y revisión periódica Android. Gmail tiene su cliente configurado; Microsoft sigue deshabilitado hasta registrar y habilitar su cliente OAuth propio de Bio. Un proveedor sin configuración aparece deshabilitado; no se simula una conexión exitosa.
 
@@ -18,7 +20,7 @@ Se selecciona cada adjunto exclusivamente por su nombre, sin usar el asunto del 
 
 El análisis confirma tipo de documento (examen/historia), nombre y fecha clínica. Compara el nombre completo y fecha de nacimiento del perfil con el titular explícito del documento. No importa automáticamente identidades desconocidas/diferentes ni documentos no clínicos/ambiguos; el nombre original queda en «Para revisar en tu correo», sin guardar el archivo rechazado. Esta comparación es de IA, no una verificación de identidad certificada. Los documentos dudosos pueden importarse manualmente después de revisarlos.
 
-El original aceptado queda cifrado localmente y pasa por la misma carga Firebase. No se publica listo hasta completar el guardado. La fecha de recepción no sustituye a la fecha clínica. IDs de mensaje/adjunto y hash del archivo evitan duplicados, incluso tras borrar un documento ya importado. Hay un máximo de un análisis nuevo de correo por revisión, compartiendo las cuotas existentes del servidor (10 análisis/usuario/día, 50 globales/día). El resto continúa en revisiones posteriores.
+El original aceptado queda cifrado localmente y pasa por la misma carga Firebase. No se publica listo hasta completar el guardado. La fecha de recepción no sustituye a la fecha clínica. IDs de mensaje/adjunto y hash del archivo evitan duplicados, incluso tras borrar un documento ya importado. Hay un máximo de un análisis nuevo de correo por revisión, compartiendo el cupo Premium de 30 análisis por cuenta y mes calendario UTC con la carga manual. Las 20 consultas de IA mensuales son un cupo separado. Las cuotas provisionales de 10/50 al día ya no describen el plan actual. El resto continúa en revisiones posteriores.
 
 ## Servidor y aislamiento
 
@@ -31,15 +33,14 @@ Todas las operaciones `/mail/*`, salvo el callback OAuth, requieren un ID token 
 - La app no envía, mueve, marca como leído ni borra correos. Desconectar desactiva la revisión local y elimina el token del servidor. Google intenta además revocarlo; en Microsoft se puede retirar también el consentimiento desde la cuenta Microsoft. Una petición ya iniciada puede finalizar.
 - Adjuntos, cuerpos, asuntos y tokens de acceso no se persisten en el adaptador de correo. Los adjuntos candidatos pasan por el servidor y Vertex AI para clasificación; los aceptados se respaldan en Firebase, según el funcionamiento existente de Bio.
 
-## Activación pendiente
+## Activación y comprobaciones pendientes
 
-Actualización del 2 de octubre de 2026: Gmail API habilitada y verificada directamente mediante Service Usage en `bio-project-15d15`, usando la sesión autorizada de Firebase CLI (`tools/enable-gmail-api.cjs`). El cliente OAuth de Google ya fue configurado en el servidor. El usuario confirmó la configuración de los usuarios de prueba y del permiso gmail.readonly. Está pendiente el consentimiento real desde Bio y comprobar una importación. El registro Microsoft queda pospuesto por decisión del usuario.
+Gmail API, cliente OAuth y permiso gmail.readonly están configurados. Callback actual: `https://us-east1-bio-project-15d15.cloudfunctions.net/bio_api/mail/callback/google`. No cambiarlo de forma aislada.
 
-1. Google Cloud, proyecto **bio-project-15d15**: habilitar Gmail API; configurar pantalla de consentimiento externa, datos de contacto y política de privacidad; crear cliente OAuth web propio de Bio.
-2. Registrar exactamente `https://us-east1-bio-project-15d15.cloudfunctions.net/bio_api/mail/callback/google` como URI de redirección. Permiso `https://www.googleapis.com/auth/gmail.readonly`.
-3. Microsoft Entra: registrar una aplicación web propia de Bio que admita cuentas organizativas y personales, con permisos delegados `Mail.Read`, `User.Read` y `offline_access`. Redirección exacta `https://us-east1-bio-project-15d15.cloudfunctions.net/bio_api/mail/callback/microsoft`.
-4. Un administrador con acceso al proyecto registra el ID/secret de cada cliente en las colecciones privadas indicadas y pone `enabled: true` solo después de configurar el proveedor. Los secretos no deben compartirse en el chat ni guardarse en archivos versionados.
-5. Probar consentimiento real, cuenta identificada, importación con PDF sintético, repetición sin duplicados, reinicio/interrupción, revocación y desconexión con cada proveedor. Estas pruebas reales no están aprobadas mientras falte la activación.
+- Completar la verificación pública descrita en `GMAIL_VERIFICACION_PUBLICA.md`; el consentimiento de usuarios de prueba no equivale a aprobación pública.
+- Comprobar en teléfono actualizado: importación sin duplicados, continuación tras PDF rechazado, interrupción/reinicio, desconexión y revocación.
+- Microsoft continúa deshabilitado; no es un requisito de esta salida inicial.
+- Los secretos siguen en configuración privada y no deben compartirse en chat ni archivos versionados.
 
 Google considera `gmail.readonly` un permiso restringido. El uso público y la transmisión de estos datos al servidor pueden requerir verificación OAuth y evaluación de seguridad; las cuentas de prueba no equivalen a habilitación general. Las cuentas organizativas Microsoft pueden exigir aprobación de su administrador.
 

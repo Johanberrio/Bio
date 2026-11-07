@@ -2,6 +2,7 @@
 import json
 import base64
 import document_analysis
+from document_input import validate_pdf
 from server import build_request
 
 
@@ -14,8 +15,12 @@ def prepare(data, analysis):
         else:
             url = item.get("file_data") or item["image_url"]
             prefix, encoded = url.split(",", 1)
-            parts.append({"inline_data": {"mime_type": prefix[5:].split(";")[0], "data": base64.b64decode(encoded, validate=True)}})
-    config = {"system_instruction": body["instructions"], "max_output_tokens": 10000}
+            mime = prefix[5:].split(";")[0]
+            raw = base64.b64decode(encoded, validate=True)
+            if mime == "application/pdf":
+                validate_pdf(raw)
+            parts.append({"inline_data": {"mime_type": mime, "data": raw}})
+    config = {"system_instruction": body["instructions"], "max_output_tokens": 6000 if analysis else 4000}
     if analysis:
         config.update(response_mime_type="application/json", response_json_schema=body["text"]["format"]["schema"])
     else:

@@ -18,6 +18,7 @@ internal object HealthBridge {
     private val types = listOf(HeartRateRecord::class, BloodPressureRecord::class,
         OxygenSaturationRecord::class, BodyTemperatureRecord::class,
         RespiratoryRateRecord::class, BloodGlucoseRecord::class, WeightRecord::class)
+    private fun latestWeightProfile(reading: JSONObject) = JSONObject().put("weightKg",reading.getDouble("value"))
     @JvmStatic fun availability(c: Context) = HealthConnectClient.getSdkStatus(c)
     @JvmStatic fun available(c: Context) = availability(c) == HealthConnectClient.SDK_AVAILABLE
     @JvmStatic fun permissions(): Set<String> = types.map { HealthPermission.getReadPermission(it) }.toSet()
@@ -38,6 +39,7 @@ internal object HealthBridge {
         if (types.none { granted.contains(HealthPermission.getReadPermission(it)) })
             throw SecurityException("Autoriza al menos un tipo de medición en Health Connect.")
         val now = Instant.now()
+        var latestWeight: JSONObject? = null
         var count = 0
         suspend fun <T: Record> read(type: KClass<T>) {
             if (!granted.contains(HealthPermission.getReadPermission(type))) return
@@ -57,7 +59,9 @@ internal object HealthBridge {
                             .put("sourcePackage",record.metadata.dataOrigin.packageName)
                             .put("sourceRecord",record.metadata.id).put("owner",cloud.owner())
                         if (metric == 7) {
+                            if (value < 0.1 || value > 700) return
                             if (HealthProfile.saveWeight(vault,item)) count++
+                            if (latestWeight == null || item.optLong("created") >= latestWeight!!.optLong("created")) latestWeight = item
                         } else batch.add(item)
                     }
                     when(record) {
@@ -74,9 +78,30 @@ internal object HealthBridge {
                 page = response.pageToken
             } while(page != null)
         }
-        for(type in types) read(type)
+        // Weight is independent: a failed vital-sign provider must not block it.
+        var weightStatus = "Autoriza el permiso Peso en Health Connect."
+        if (granted.contains(HealthPermission.getReadPermission(WeightRecord::class))) {
+            try {
+                read(WeightRecord::class)
+                if (cloud.account() && cloud.owner() == source.optString("owner") && SourceSync.setting(vault,"health").optBoolean("enabled")) {
+                    synchronized(SourceSync.LOCK) {
+                        val p = HealthProfile.current(vault)
+                        val latest = latestWeight
+                        if (latest != null) {
+                            if (HealthProfile.applyWeight(p,latest,cloud.owner(),System.currentTimeMillis())) vault.put("profile",p)
+                            weightStatus = "Peso leído: " + MainActivity.measurement(latestWeightProfile(latest),"weightKg","kg")
+                        } else weightStatus = "Health Connect no devolvió pesos válidos de los últimos 30 días. Revisa que la app de origen comparta Peso."
+                    }
+                }
+            } catch (_: Exception) { weightStatus = "No se pudo leer Peso en Health Connect. Revisa el permiso y vuelve a intentarlo." }
+        }
+        synchronized(SourceSync.LOCK) {
+            val current = SourceSync.setting(vault,"health")
+            if (cloud.account() && current.optString("owner") == cloud.owner()) vault.put("sources",current.put("weightStatus",weightStatus))
+        }
+        for(type in types.filter { it != WeightRecord::class }) read(type)
         if (cloud.account() && cloud.owner() == source.optString("owner")) {
-            HealthProfile.syncWeight(vault,cloud.owner())
+
             try { cloud.syncProfile(vault) } catch (_: Exception) { /* Pending profile retries on the next sync. */ }
         }
         count

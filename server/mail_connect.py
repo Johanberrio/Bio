@@ -142,8 +142,14 @@ def callback(db, provider, args):
     if not identity or not email or len(email) > 320:
         raise MailError("No se pudo identificar la cuenta autorizada.")
     key = digest(provider + ":" + identity)
-    accounts(db, uid).document(key).set({"provider": provider, "email": email,
-        "refresh": token["refresh_token"], "generation": secrets.token_hex(16)})
+    @firestore.transactional
+    def save_account(transaction):
+        # A callback already in flight must not recreate credentials after erasure starts.
+        if db.collection("_accountDeletion").document(uid).get(transaction=transaction).exists is True:
+            raise MailError("Esta cuenta tiene una solicitud de eliminación.", 410)
+        transaction.set(accounts(db, uid).document(key), {"provider": provider, "email": email,
+            "refresh": token["refresh_token"], "generation": secrets.token_hex(16)})
+    save_account(db.transaction())
 
 def account_ref(db, uid, key):
     if not isinstance(key, str) or not re.fullmatch(r"[a-f0-9]{64}", key):

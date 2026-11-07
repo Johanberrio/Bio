@@ -54,3 +54,8 @@ Requiere que Samsung Health u otra app escriba peso en Health Connect y que el u
 El peso no aparece en signos vitales ni en su formulario manual. Health Connect lo guarda en la colección local cifrada `weights`, separada de `vitals`, y actualiza automáticamente `profile.weightKg` para Inicio y el respaldo del perfil. Los registros de peso antiguos se trasladan sin perder su identidad; se mantiene la deduplicación. El identificador interno heredado 7 se conserva solo como compatibilidad de datos, no como categoría visible.
 
 Los botones del perfil usan el mismo componente que las acciones principales de Bio, sin tintes nativos. Los selectores tienen tipografía y colores explícitos en ambos temas.
+
+
+## Corrección 0.6.10
+
+Al sincronizar Peso, la última lectura válida devuelta por Health Connect reemplaza el valor manual aunque la fecha de edición del perfil sea posterior. Entre lecturas automáticas se conserva la más reciente y se aceptan correcciones del mismo registro. Solo se aplica el resultado de la lectura actual, no pesos almacenados cuando falta permiso o no llegan datos. El intervalo de lectura sigue siendo 30 días. Inicio muestra fuente, fecha y estado explícito (leído, sin permiso, sin datos o error). La lectura de Peso se ejecuta antes que otros parámetros y la pantalla se refresca antes del procesamiento de correo.

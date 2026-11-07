@@ -31,7 +31,7 @@ final class ProfileSourceChecks {
         reading.put("owner","weight-owner").put("value",0);
         t.check(!HealthProfile.applyWeight(weighted,reading,"weight-owner",300),"Invalid weight excluded");
         weighted.put("weightMeasuredAt",290).put("weightOrigin","Registro manual");reading.put("value",70);
-        t.check(!HealthProfile.applyWeight(weighted,reading,"weight-owner",300),"Manual weight protected from older device data");
+        t.check(HealthProfile.applyWeight(weighted,reading,"weight-owner",300),"Automatic weight replaces manual profile fallback");
         String weightId="weight-migration-"+UUID.randomUUID();
         JSONObject legacyWeight=new JSONObject().put("id",weightId).put("metric",7).put("value",65).put("created",100).put("origin","Health Connect");
         try{

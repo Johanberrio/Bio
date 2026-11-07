@@ -46,8 +46,9 @@ public class AuthActivity extends FragmentActivity {
     EditText field(String hint,int type){EditText e=new EditText(this);e.setHint(hint);e.setTextColor(ink);e.setHintTextColor(muted);e.setInputType(type);e.setSingleLine(true);if((type&InputType.TYPE_TEXT_VARIATION_PASSWORD)!=0)e.setTransformationMethod(android.text.method.PasswordTransformationMethod.getInstance());e.setMinHeight(dp(56));e.setSaveEnabled(false);add(e);return e;}
     void button(String text,Runnable action,boolean primary){TextView b=label(text,15,primary?Color.WHITE:purple);b.setGravity(Gravity.CENTER);b.setMinHeight(dp(52));b.setPadding(dp(12),dp(14),dp(12),dp(14));GradientDrawable bg=new GradientDrawable();bg.setColor(primary?purple:0xfff2edf9);bg.setCornerRadius(dp(16));b.setBackground(bg);b.setFocusable(true);b.setOnClickListener(v->{if(!busy)action.run();});LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.topMargin=dp(12);content.addView(b,p);}
     private void draw(){
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Color.WHITE);content=new LinearLayout(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(28),dp(40),dp(28),dp(28));scroll.addView(content);setContentView(scroll);
-        if(Build.VERSION.SDK_INT>=30)scroll.setOnApplyWindowInsetsListener((v,i)->{android.graphics.Insets b=i.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.ime());v.setPadding(b.left,b.top,b.right,b.bottom);return i;});
+        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.setBackgroundColor(Color.WHITE);content=new AdaptiveColumn(this);content.setOrientation(LinearLayout.VERTICAL);content.setPadding(dp(28),dp(40),dp(28),dp(28));scroll.addView(content);setContentView(scroll);
+        if(Build.VERSION.SDK_INT>=30)scroll.setOnApplyWindowInsetsListener((v,i)->{android.graphics.Insets b=i.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout()|WindowInsets.Type.ime());v.setPadding(b.left,b.top,b.right,b.bottom);return i;});
+        if(Build.VERSION.SDK_INT<30)scroll.setFitsSystemWindows(true);
         ImageView logo=new ImageView(this);logo.setImageResource(R.drawable.bio_header_transparent);logo.setContentDescription("Bio");logo.setScaleType(ImageView.ScaleType.FIT_CENTER);content.addView(logo,new LinearLayout.LayoutParams(dp(104),dp(88)));
         TextView heading=label(register?"Tu salud, contigo":"Cuida tu salud",30,ink);heading.setTypeface(null,Typeface.BOLD);add(heading);
         add(label(register?"Crea tu cuenta y conserva tus documentos.":"Inicia sesión para acceder a tu espacio personal.",15,muted));
@@ -65,6 +66,7 @@ public class AuthActivity extends FragmentActivity {
         try{if(cloud.account()&&access.enabled(cloud.owner()))button("Entrar con huella o rostro",()->biometric(false),false);}catch(Exception ignored){}
         button(register?"Ya tengo una cuenta":"Crear una cuenta",()->{register=!register;draw();},false);
         button("Olvidé mi contraseña",this::reset,false);
+        button("Política de privacidad",()->{try{startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse(AccountDeletionActivity.PRIVACY)));}catch(Exception e){status.setText("No hay navegador disponible.");}},false);
         add(label("Tu huella y tu rostro los verifica Android. Bio no recibe ni almacena tus datos biométricos.",12,muted));
     }
     private String address(){String value=email.getText().toString().trim();if(!android.util.Patterns.EMAIL_ADDRESS.matcher(value).matches())throw new IllegalArgumentException("Escribe un correo válido.");return value;}
